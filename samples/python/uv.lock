@@ -10,6 +10,7 @@ resolution-markers = [
 [manifest]
 members = [
     "a2a-samples",
+    "a2a-samples-ag2",
     "a2a-samples-image-gen",
 ]
 
@@ -68,6 +69,23 @@ dev = [
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "ruff", specifier = ">=0.11.2" },
+]
+
+[[package]]
+name = "a2a-samples-ag2"
+version = "0.1.0"
+source = { virtual = "agents/ag2" }
+dependencies = [
+    { name = "a2a-samples" },
+    { name = "crewai", extra = ["tools"] },
+    { name = "google-genai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "a2a-samples", editable = "." },
+    { name = "crewai", extras = ["tools"], specifier = ">=0.95.0" },
+    { name = "google-genai", specifier = ">=1.9.0" },
 ]
 
 [[package]]
