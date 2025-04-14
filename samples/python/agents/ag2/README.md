@@ -1,16 +1,16 @@
-## CrewAI Agent with A2A Protocol
+## AG2 Agent with A2A Protocol
 
-This sample demonstrates a simple image generation agent built with [CrewAI](https://www.crewai.com/open-source) and exposed through the A2A protocol.
+This sample demonstrates a simple image generation agent built with [AG2](https://docs.ag2.ai/latest) and exposed through the A2A protocol.
 
 ## How It Works
 
-This agent utilizes CrewAI and the Google Gemini API to generate images based on text prompts. The A2A protocol enables standardized interaction with the agent, allowing clients to send requests and receive images as artifacts.
+This agent utilizes AG2 and the Google Gemini API to generate images based on text prompts. The A2A protocol enables standardized interaction with the agent, allowing clients to send requests and receive images as artifacts.
 
 ```mermaid
 sequenceDiagram
     participant Client as A2A Client
     participant Server as A2A Server
-    participant Agent as CrewAI Agent
+    participant Agent as AG2 Agent
     participant API as Gemini API
 
     Client->>Server: Send task with text prompt
@@ -24,7 +24,7 @@ sequenceDiagram
 
 ## Key Components
 
-- **CrewAI Agent**: Image generation agent with specialized tools
+- **AG2 Agent**: Image generation agent with specialized tools
 - **A2A Server**: Provides standardized protocol for interacting with the agent
 - **Image Generation**: Uses Gemini API to create images from text descriptions
 - **Cache System**: Stores generated images for retrieval (in-memory or file-based)
@@ -40,7 +40,7 @@ sequenceDiagram
 1. Navigate to the samples directory:
 
    ```bash
-   cd samples/python/agents/crewai
+   cd samples/python/agents/ag2
    ```
 
 2. Create an environment file with your API key:
@@ -89,11 +89,11 @@ sequenceDiagram
 
 **Limitations:**
 
-- No true streaming (CrewAI doesn't natively support it)
+- No true streaming (not implemented yet)
 - Limited agent interactions (no multi-turn conversations)
 
 ## Learn More
 
 - [A2A Protocol Documentation](https://google.github.io/A2A/#/documentation)
-- [CrewAI Documentation](https://docs.crewai.com/introduction)
+- [AG2 Documentation](https://docs.ag2.ai/latest/)
 - [Google Gemini API](https://ai.google.dev/gemini-api)
