@@ -1,31 +1,34 @@
+import json
 import logging
 import os
 import traceback
-import json
-from dotenv import load_dotenv
-from typing import AsyncIterable, Any, Literal
-from pydantic import BaseModel
+
+from collections.abc import AsyncIterable
+from typing import Any, Literal
 
 from autogen import AssistantAgent, LLMConfig
 from autogen.mcp import create_toolkit
-
+from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from pydantic import BaseModel
+
 
 logger = logging.getLogger(__name__)
 
+
 class ResponseModel(BaseModel):
     """Response model for the YouTube MCP agent."""
+
     text_reply: str
     closed_captions: str | None
     status: Literal["TERMINATE", ""]
-    
+
     def format(self) -> str:
         """Format the response as a string."""
         if self.closed_captions is None:
             return self.text_reply
-        else:
-            return f"{self.text_reply}\n\nClosed Captions:\n{self.closed_captions}"
+        return f"{self.text_reply}\n\nClosed Captions:\n{self.closed_captions}"
 
 
 def get_api_key() -> str:
@@ -33,8 +36,9 @@ def get_api_key() -> str:
     load_dotenv()
     return os.getenv("OPENAI_API_KEY")
 
+
 class YoutubeMCPAgent:
-    """Agent to access a Youtube MCP Server to download closed captions"""
+    """Agent to access a Youtube MCP Server to download closed captions."""
 
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain"]
 
@@ -53,20 +57,26 @@ class YoutubeMCPAgent:
                 name="YoutubeMCPAgent",
                 llm_config=llm_config,
                 system_message=(
-                    "You are a specialized assistant for processing YouTube videos. "
-                    "You can use MCP tools to fetch captions and process YouTube content. "
-                    "You can provide captions, summarize videos, or analyze content from YouTube. "
-                    "If the user asks about anything not related to YouTube videos or doesn't provide a YouTube URL, "
-                    "politely state that you can only help with tasks related to YouTube videos.\n\n"
-                    "IMPORTANT: Always respond using the ResponseModel format with these fields:\n"
+                    "You are a specialized assistant for processing YouTube "
+                    "videos. You can use MCP tools to fetch captions and "
+                    "process YouTube content. You can provide captions, "
+                    "summarize videos, or analyze content from YouTube. If "
+                    "the user asks about anything not related to YouTube "
+                    "videos or doesn't provide a YouTube URL, politely state "
+                    "that you can only help with tasks related to YouTube "
+                    "videos.\n\n"
+                    "IMPORTANT: Always respond using the ResponseModel format "
+                    "with these fields:\n"
                     "- text_reply: Your main response text\n"
-                    "- closed_captions: YouTube captions if available, null if not relevant\n"
+                    "- closed_captions: YouTube captions if available, null if "
+                    "not relevant\n"
                     "- status: Always use 'TERMINATE' for all responses \n\n"
                     "Example response:\n"
                     "{\n"
-                    "  \"text_reply\": \"Here's the information you requested...\",\n"
-                    "  \"closed_captions\": null,\n"
-                    "  \"status\": \"TERMINATE\"\n"
+                    '  "text_reply": "Here\'s the information you '
+                    'requested...",\n'
+                    '  "closed_captions": null,\n'
+                    '  "status": "TERMINATE"\n'
                     "}"
                 ),
             )
@@ -83,31 +93,36 @@ class YoutubeMCPAgent:
             # Try to parse the response as a ResponseModel JSON
             response_dict = json.loads(response)
             model = ResponseModel(**response_dict)
-            
+
             # All final responses should be treated as complete
             return {
                 "is_task_complete": True,
                 "require_user_input": False,
-                "content": model.format()
+                "content": model.format(),
             }
         except Exception as e:
             # Log but continue with best-effort fallback
             logger.error(f"Error parsing response: {e}, response: {response}")
-            
+
             # Default to treating it as a completed response
             return {
-                "is_task_complete": True, 
+                "is_task_complete": True,
                 "require_user_input": False,
-                "content": response
+                "content": response,
             }
 
-    async def stream(self, query: str, sessionId: str) -> AsyncIterable[dict[str, Any]]:
+    async def stream(
+        self, query: str, session_id: str
+    ) -> AsyncIterable[dict[str, Any]]:
         """Stream updates from the MCP agent."""
         if not self.initialized:
             yield {
                 "is_task_complete": False,
                 "require_user_input": True,
-                "content": "Agent initialization failed. Please check the dependencies and logs."
+                "content": (
+                    "Agent initialization failed. Please check the "
+                    "dependencies and logs."
+                ),
             }
             return
 
@@ -116,19 +131,21 @@ class YoutubeMCPAgent:
             yield {
                 "is_task_complete": False,
                 "require_user_input": False,
-                "content": "Processing request..."
+                "content": "Processing request...",
             }
 
             logger.info(f"Processing query: {query[:50]}...")
 
-            try:                
+            try:
                 # Create stdio server parameters for mcp-youtube
                 server_params = StdioServerParameters(
                     command="mcp-youtube",
                 )
 
                 # Connect to the MCP server using stdio client
-                async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+                async with stdio_client(server_params) as (read, write), (
+                    ClientSession(read, write)
+                ) as session:
                     # Initialize the connection
                     await session.initialize()
 
@@ -147,35 +164,42 @@ class YoutubeMCPAgent:
                     try:
                         # Process the result
                         await result.process()
-                        
+
                         # Get the summary which contains the output
                         response = await result.summary
 
                     except Exception as extraction_error:
-                        logger.error(f"Error extracting response: {extraction_error}")
+                        logger.error(
+                            f"Error extracting response: {extraction_error}"
+                        )
                         traceback.print_exc()
-                        response = f"Error processing request: {str(extraction_error)}"
+                        response = (
+                            f"Error processing request: {extraction_error!s}"
+                        )
 
                     # Final response
                     yield self.get_agent_response(response)
-                    
+
             except Exception as e:
-                logger.error(f"Error during processing: {traceback.format_exc()}")
+                logger.error(
+                    f"Error during processing: {traceback.format_exc()}"
+                )
                 yield {
                     "is_task_complete": False,
                     "require_user_input": True,
-                    "content": f"Error processing request: {str(e)}"
+                    "content": f"Error processing request: {e!s}",
                 }
         except Exception as e:
             logger.error(f"Error in streaming agent: {traceback.format_exc()}")
             yield {
                 "is_task_complete": False,
                 "require_user_input": True,
-                "content": f"Error processing request: {str(e)}"
+                "content": f"Error processing request: {e!s}",
             }
 
-    def invoke(self, query: str, sessionId: str) -> dict[str, Any]:
+    def invoke(self, query: str, session_id: str) -> dict[str, Any]:
         """Synchronous invocation of the MCP agent."""
         raise NotImplementedError(
-            "Synchronous invocation is not supported by this agent. Use the streaming endpoint (tasks/sendSubscribe) instead."
+            "Synchronous invocation is not supported by this agent. "
+            "Use the streaming endpoint (tasks/sendSubscribe) instead."
         )
